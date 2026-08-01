@@ -1,0 +1,290 @@
+```css
+/* =========================================
+   EmployeeHub - Global Styles
+   ========================================= */
+
+/* ---------- CSS Variables ---------- */
+
+:root {
+  /* Primary Theme */
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+
+  /* Background */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: #f8fafc;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  /* Borders */
+  --border-color: #e2e8f0;
+
+  /* Status Colors */
+  --success-color: #16a34a;
+  --success-light: #dcfce7;
+
+  --danger-color: #dc2626;
+  --danger-light: #fee2e2;
+
+  --warning-color: #d97706;
+  --warning-light: #fef3c7;
+
+  /* Shadows */
+  --shadow-sm:
+    0 1px 3px
+    rgba(15, 23, 42, 0.08);
+
+  --shadow-md:
+    0 4px 12px
+    rgba(15, 23, 42, 0.1);
+
+  --shadow-lg:
+    0 10px 30px
+    rgba(15, 23, 42, 0.12);
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --header-height: 72px;
+}
+
+
+/* ---------- Box Sizing ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+
+/* ---------- HTML ---------- */
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+
+/* ---------- Body ---------- */
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+
+  font-family:
+    Inter,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  font-size: 14px;
+  line-height: 1.5;
+
+  color: var(--text-primary);
+  background: var(--bg-primary);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ---------- Links ---------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+/* ---------- Buttons ---------- */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+
+/* ---------- Buttons ---------- */
+
+button {
+  border: none;
+  outline: none;
+}
+
+
+/* ---------- Images ---------- */
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+
+/* ---------- Lists ---------- */
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+
+/* ---------- Headings ---------- */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+
+/* ---------- Paragraph ---------- */
+
+p {
+  margin: 0;
+}
+
+
+/* ---------- Selection ---------- */
+
+::selection {
+  color: #ffffff;
+  background: var(--primary-color);
+}
+
+
+/* ---------- Scrollbar ---------- */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+/* ---------- Focus Accessibility ---------- */
+
+:focus-visible {
+  outline: 3px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+
+/* ---------- Loading State ---------- */
+
+.loading-screen {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--bg-primary);
+}
+
+
+/* ---------- Error State ---------- */
+
+.error-message {
+  padding: 12px 16px;
+
+  color: var(--danger-color);
+  background: var(--danger-light);
+
+  border: 1px solid
+    rgba(220, 38, 38, 0.2);
+
+  border-radius: var(--radius-md);
+
+  font-size: 14px;
+}
+
+
+/* ---------- Success Message ---------- */
+
+.success-message {
+  padding: 12px 16px;
+
+  color: var(--success-color);
+  background: var(--success-light);
+
+  border: 1px solid
+    rgba(22, 163, 74, 0.2);
+
+  border-radius: var(--radius-md);
+
+  font-size: 14px;
+}
+
+
+/* ---------- Utility Classes ---------- */
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* ---------- Responsive Typography ---------- */
+
+@media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+}
+```
