@@ -1,4 +1,3 @@
-```json
 {
   "name": "employeehub-frontend",
   "version": "1.0.0",
@@ -20,4 +19,3 @@
     "vite": "^6.0.7"
   }
 }
-```
