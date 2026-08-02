@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME   = 'ps73171/employeehub-backend'
-        IMAGE_TAG    = "${BUILD_NUMBER}"
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds') // Jenkins credentials ID
-        SONAR_TOKEN  = credentials('sonar-token')
+        IMAGE_NAME             = 'ps73171/employeehub-backend'
+        IMAGE_TAG              = "${BUILD_NUMBER}"
+        DOCKERHUB_CREDENTIALS  = credentials('dockerhub-credentials')
+        SONAR_TOKEN            = credentials('sonar-token')
     }
 
     stages {
@@ -28,15 +28,17 @@ pipeline {
                 echo 'Running application tests...'
                 sh '''
                     cd backend
-                    # example for Maven/Node - adjust as per your stack
-                    # mvn test  OR  npm test
+                    # Apne stack ke hisaab se command daalo, jaise:
+                    # mvn test
+                    # npm install && npm test
+                    # python -m pytest
                 '''
             }
         }
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('MySonarQubeServer') { // Jenkins > Configure System me define kiya hua name
+                withSonarQubeEnv('MySonarQubeServer') {
                     sh '''
                         sonar-scanner \
                           -Dsonar.projectKey=employeehub-backend \
@@ -48,20 +50,20 @@ pipeline {
             }
         }
 
-        stage('Trivy Security Scan') {
-            steps {
-                sh '''
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL \
-                    ${IMAGE_NAME}:${IMAGE_TAG} || true
-                '''
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 sh '''
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ./backend
                     docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
+                sh '''
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL \
+                    ${IMAGE_NAME}:${IMAGE_TAG} || true
                 '''
             }
         }
@@ -87,7 +89,13 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout || true'
+            script {
+                try {
+                    sh 'docker logout || true'
+                } catch (e) {
+                    echo "Logout skipped: ${e.message}"
+                }
+            }
         }
         success {
             echo 'EmployeeHub CI/CD Pipeline completed successfully!'
