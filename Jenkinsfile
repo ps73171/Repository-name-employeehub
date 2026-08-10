@@ -49,12 +49,14 @@ stages {
             echo 'Running SonarQube analysis...'
 
             withSonarQubeEnv('sonar') {
+
                 withCredentials([
                     string(
-                        credentialsId: 'sonar-token',
+                        credentialsId: 'sonarID',
                         variable: 'SONAR_TOKEN'
                     )
                 ]) {
+
                     sh '''
                         sonar-scanner \
                           -Dsonar.projectKey=employeehub-backend \
