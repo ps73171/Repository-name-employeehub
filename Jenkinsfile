@@ -1,10 +1,6 @@
 pipeline {
 agent any
 
-tools {
-    sonarQube 'sonar-scanner'
-}
-
 environment {
     IMAGE_NAME = 'ps73171/employeehub-backend'
     IMAGE_TAG = "${BUILD_NUMBER}"
@@ -40,7 +36,7 @@ stages {
 
                 echo "Running application tests..."
 
-                # Enable this when pytest is configured:
+                # Uncomment when pytest is configured:
                 # python -m pytest
 
                 echo "Tests completed successfully."
@@ -52,27 +48,31 @@ stages {
         steps {
             echo 'Running SonarQube analysis...'
 
-            withSonarQubeEnv('sonar') {
+            script {
+                def scannerHome = tool 'sonar-scanner'
 
-                withCredentials([
-                    string(
-                        credentialsId: 'sonarID',
-                        variable: 'SONAR_TOKEN'
-                    )
-                ]) {
+                withSonarQubeEnv('sonar') {
 
-                    sh '''
-                        echo "SonarScanner version:"
-                        sonar-scanner --version
+                    withCredentials([
+                        string(
+                            credentialsId: 'sonarID',
+                            variable: 'SONAR_TOKEN'
+                        )
+                    ]) {
 
-                        echo "Starting SonarQube scan..."
+                        sh """
+                            echo "SonarScanner version:"
+                            ${scannerHome}/bin/sonar-scanner --version
 
-                        sonar-scanner \
-                          -Dsonar.projectKey=employeehub-backend \
-                          -Dsonar.sources=./backend \
-                          -Dsonar.host.url="$SONAR_HOST_URL" \
-                          -Dsonar.token="$SONAR_TOKEN"
-                    '''
+                            echo "Starting SonarQube scan..."
+
+                            ${scannerHome}/bin/sonar-scanner \
+                              -Dsonar.projectKey=employeehub-backend \
+                              -Dsonar.sources=./backend \
+                              -Dsonar.host.url="\$SONAR_HOST_URL" \
+                              -Dsonar.token="\$SONAR_TOKEN"
+                        """
+                    }
                 }
             }
         }
@@ -112,7 +112,7 @@ stages {
 
     stage('Docker Push') {
         steps {
-            echo 'Pushing Docker image to Docker Hub...'
+            echo 'Pushing Docker images to Docker Hub...'
 
             sh '''
                 echo "$DOCKERHUB_CREDENTIALS_PSW" | \
