@@ -1,4 +1,4 @@
-```text
+text
 # =========================================
 # EmployeeHub Backend Dependencies
 # =========================================
@@ -33,4 +33,4 @@ python-multipart
 
 # CORS Support
 starlette
-```
+
