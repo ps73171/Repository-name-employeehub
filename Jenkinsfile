@@ -11,6 +11,7 @@ stages {
 
     stage('Checkout') {
         steps {
+            echo 'Checking out EmployeeHub source code...'
             checkout scm
         }
     }
@@ -18,23 +19,36 @@ stages {
     stage('Build') {
         steps {
             echo 'Building EmployeeHub application...'
-            sh 'docker --version'
+
+            sh '''
+                echo "Checking Docker version..."
+                docker --version
+            '''
         }
     }
 
     stage('Test') {
         steps {
-            echo 'Running application tests...'
+            echo 'Running EmployeeHub application tests...'
+
             sh '''
                 cd backend
-                echo "Tests completed"
+
+                echo "Running tests..."
+
+                # Enable this when pytest tests are available:
+                # python -m pytest
+
+                echo "Tests completed successfully."
             '''
         }
     }
 
     stage('SonarQube Scan') {
         steps {
-            withSonarQubeEnv('MySonarQubeServer') {
+            echo 'Running SonarQube analysis...'
+
+            withSonarQubeEnv('sonar') {
                 withCredentials([
                     string(
                         credentialsId: 'sonar-token',
@@ -55,6 +69,8 @@ stages {
 
     stage('Docker Build') {
         steps {
+            echo 'Building Docker image...'
+
             sh '''
                 docker build \
                     -t ${IMAGE_NAME}:${IMAGE_TAG} \
@@ -69,6 +85,8 @@ stages {
 
     stage('Trivy Security Scan') {
         steps {
+            echo 'Scanning Docker image with Trivy...'
+
             sh '''
                 trivy image \
                     --exit-code 0 \
@@ -80,6 +98,8 @@ stages {
 
     stage('Docker Push') {
         steps {
+            echo 'Pushing Docker image to Docker Hub...'
+
             sh '''
                 echo "$DOCKERHUB_CREDENTIALS_PSW" | \
                 docker login \
@@ -87,6 +107,7 @@ stages {
                     --password-stdin
 
                 docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
                 docker push ${IMAGE_NAME}:latest
 
                 docker logout || true
@@ -96,7 +117,8 @@ stages {
 
     stage('Deploy') {
         steps {
-            echo 'Deployment stage will be configured after Kubernetes/Argo CD setup.'
+            echo 'Deployment stage is currently not configured.'
+            echo 'Kubernetes/Argo CD deployment will be configured next.'
         }
     }
 }
