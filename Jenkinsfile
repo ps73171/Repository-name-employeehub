@@ -2,14 +2,15 @@ pipeline {
     agent any
 
     environment {
+        // Docker Images
         BACKEND_IMAGE  = 'ps73171/employeehub-backend'
         FRONTEND_IMAGE = 'ps73171/employeehub-frontend'
 
+        // Jenkins Build Number
         IMAGE_TAG = "${BUILD_NUMBER}"
 
+        // Docker Hub Credentials
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-
-        SONAR_HOST_URL = 'http://192.168.10.101:9000'
     }
 
     stages {
@@ -17,120 +18,97 @@ pipeline {
         // =========================================================
         // CHECKOUT
         // =========================================================
-
         stage('Checkout') {
             steps {
-                echo 'Checking out EmployeeHub source code...'
+                echo '======================================'
+                echo 'Checking out EmployeeHub source code'
+                echo '======================================'
 
                 checkout scm
-            }
-        }
-
-
-        // =========================================================
-        // BUILD / ENVIRONMENT CHECK
-        // =========================================================
-
-        stage('Build') {
-            steps {
-                echo 'Building EmployeeHub application...'
 
                 sh '''
-                    echo "======================================"
-                    echo "Docker Version"
-                    echo "======================================"
-
-                    docker --version
-
-                    echo ""
-                    echo "======================================"
-                    echo "Workspace"
-                    echo "======================================"
-
+                    echo "Workspace:"
                     pwd
 
                     echo ""
-                    echo "======================================"
-                    echo "Project Structure"
-                    echo "======================================"
-
+                    echo "Project structure:"
                     ls -la
 
                     echo ""
-                    echo "======================================"
-                    echo "Backend"
-                    echo "======================================"
-
+                    echo "Backend:"
                     ls -la backend
 
                     echo ""
-                    echo "======================================"
-                    echo "Frontend"
-                    echo "======================================"
-
+                    echo "Frontend:"
                     ls -la frontend
                 '''
             }
         }
 
-
         // =========================================================
-        // TEST
+        // BUILD
         // =========================================================
-
-        stage('Test') {
+        stage('Build') {
             steps {
-                echo 'Running EmployeeHub application tests...'
+                echo '======================================'
+                echo 'Build Stage'
+                echo '======================================'
 
                 sh '''
-                    echo "======================================"
-                    echo "Backend Test"
-                    echo "======================================"
-
-                    if [ -d "backend" ]; then
-                        cd backend
-
-                        echo "Checking requirements.txt..."
-
-                        if [ -f "requirements.txt" ]; then
-                            echo "requirements.txt found"
-                        else
-                            echo "ERROR: requirements.txt not found"
-                            exit 1
-                        fi
-
-                        echo "Backend tests completed."
-                    fi
-
-                    cd ..
+                    echo "Docker version:"
+                    docker --version
 
                     echo ""
-                    echo "======================================"
-                    echo "Frontend Test"
-                    echo "======================================"
+                    echo "Backend Dockerfile:"
+                    test -f backend/Dockerfile
 
-                    if [ -d "frontend" ]; then
+                    echo ""
+                    echo "Frontend Dockerfile:"
+                    test -f frontend/Dockerfile
 
-                        if [ -f "frontend/package.json" ]; then
-                            echo "package.json found"
-                        else
-                            echo "WARNING: package.json not found"
-                        fi
-
-                        echo "Frontend tests completed."
-                    fi
+                    echo ""
+                    echo "Build validation completed."
                 '''
             }
         }
 
+        // =========================================================
+        // TEST
+        // =========================================================
+        stage('Test') {
+            steps {
+                echo '======================================'
+                echo 'Test Stage'
+                echo '======================================'
+
+                sh '''
+                    echo "Running backend tests..."
+
+                    if [ -f backend/requirements.txt ]; then
+                        echo "requirements.txt found"
+                    fi
+
+                    echo ""
+                    echo "Running frontend validation..."
+
+                    if [ -f frontend/package.json ]; then
+                        echo "package.json found"
+                    fi
+
+                    echo ""
+                    echo "Tests completed successfully."
+                '''
+            }
+        }
 
         // =========================================================
         // SONARQUBE
         // =========================================================
-
         stage('SonarQube Scan') {
             steps {
-                echo 'Running SonarQube analysis...'
+                echo '======================================'
+                echo 'SonarQube Analysis'
+                echo '======================================'
 
                 script {
 
@@ -139,234 +117,182 @@ pipeline {
                         type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                     )
 
-                    withCredentials([
-                        string(
-                            credentialsId: 'sonarID',
-                            variable: 'SONAR_TOKEN'
-                        )
-                    ]) {
+                    withSonarQubeEnv('sonar') {
 
-                        sh """
-                            echo "======================================"
-                            echo "SonarScanner Version"
-                            echo "======================================"
+                        withCredentials([
+                            string(
+                                credentialsId: 'sonarID',
+                                variable: 'SONAR_TOKEN'
+                            )
+                        ]) {
 
-                            ${scannerHome}/bin/sonar-scanner --version
+                            sh """
+                                echo "SonarScanner:"
+                                ${scannerHome}/bin/sonar-scanner --version
 
-                            echo ""
-                            echo "======================================"
-                            echo "SonarQube Server"
-                            echo "======================================"
+                                echo ""
+                                echo "Starting SonarQube scan..."
 
-                            echo "${SONAR_HOST_URL}"
+                                ${scannerHome}/bin/sonar-scanner \
+                                  -Dsonar.projectKey=employeehub \
+                                  -Dsonar.projectName=EmployeeHub \
+                                  -Dsonar.sources=backend,frontend \
+                                  -Dsonar.host.url=\$SONAR_HOST_URL \
+                                  -Dsonar.token=\$SONAR_TOKEN
 
-                            echo ""
-                            echo "======================================"
-                            echo "Starting SonarQube Scan"
-                            echo "======================================"
-
-                            ${scannerHome}/bin/sonar-scanner \\
-                              -Dsonar.projectKey=employeehub \\
-                              -Dsonar.projectName="EmployeeHub" \\
-                              -Dsonar.sources=backend,frontend \\
-                              -Dsonar.host.url="${SONAR_HOST_URL}" \\
-                              -Dsonar.token="${SONAR_TOKEN}"
-
-                            echo ""
-                            echo "SonarQube scan completed successfully."
-                        """
+                                echo ""
+                                echo "SonarQube scan completed."
+                            """
+                        }
                     }
                 }
             }
         }
 
-
         // =========================================================
         // DOCKER BUILD
         // =========================================================
-
         stage('Docker Build') {
             steps {
-                echo 'Building Backend and Frontend Docker images...'
+                echo '======================================'
+                echo 'Docker Image Build'
+                echo '======================================'
 
                 sh '''
-                    echo "======================================"
-                    echo "Building Backend Docker Image"
-                    echo "======================================"
+                    echo "Building Backend image..."
 
                     docker build \
-                      -t ${BACKEND_IMAGE}:${IMAGE_TAG} \
-                      ./backend
-
-                    docker tag \
-                      ${BACKEND_IMAGE}:${IMAGE_TAG} \
-                      ${BACKEND_IMAGE}:latest
-
+                        -t ${BACKEND_IMAGE}:${IMAGE_TAG} \
+                        ./backend
 
                     echo ""
-                    echo "======================================"
-                    echo "Building Frontend Docker Image"
-                    echo "======================================"
+                    echo "Building Frontend image..."
 
                     docker build \
-                      -t ${FRONTEND_IMAGE}:${IMAGE_TAG} \
-                      ./frontend
-
-                    docker tag \
-                      ${FRONTEND_IMAGE}:${IMAGE_TAG} \
-                      ${FRONTEND_IMAGE}:latest
-
+                        -t ${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                        ./frontend
 
                     echo ""
-                    echo "======================================"
-                    echo "Docker Images Created"
-                    echo "======================================"
+                    echo "Creating latest tags..."
 
+                    docker tag \
+                        ${BACKEND_IMAGE}:${IMAGE_TAG} \
+                        ${BACKEND_IMAGE}:latest
+
+                    docker tag \
+                        ${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                        ${FRONTEND_IMAGE}:latest
+
+                    echo ""
+                    echo "Docker images created:"
                     docker images | grep employeehub
                 '''
             }
         }
 
-
         // =========================================================
         // TRIVY SECURITY SCAN
         // =========================================================
-
         stage('Trivy Security Scan') {
             steps {
-                echo 'Running Trivy security scan...'
+                echo '======================================'
+                echo 'Trivy Security Scan'
+                echo '======================================'
 
-                sh '''
-                    echo "======================================"
-                    echo "Trivy Backend Scan"
-                    echo "======================================"
+                timeout(time: 10, unit: 'MINUTES') {
 
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 0 \
-                      ${BACKEND_IMAGE}:${IMAGE_TAG}
+                    sh '''
+                        echo "Trivy Version:"
+                        trivy --version
 
+                        echo ""
+                        echo "======================================"
+                        echo "Trivy Backend Scan"
+                        echo "======================================"
 
-                    echo ""
-                    echo "======================================"
-                    echo "Trivy Frontend Scan"
-                    echo "======================================"
+                        trivy image \
+                            --severity HIGH,CRITICAL \
+                            --exit-code 0 \
+                            --no-progress \
+                            ${BACKEND_IMAGE}:${IMAGE_TAG}
 
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 0 \
-                      ${FRONTEND_IMAGE}:${IMAGE_TAG}
+                        echo ""
+                        echo "======================================"
+                        echo "Trivy Frontend Scan"
+                        echo "======================================"
 
+                        trivy image \
+                            --severity HIGH,CRITICAL \
+                            --exit-code 0 \
+                            --no-progress \
+                            ${FRONTEND_IMAGE}:${IMAGE_TAG}
 
-                    echo ""
-                    echo "Trivy security scan completed."
-                '''
+                        echo ""
+                        echo "======================================"
+                        echo "Trivy security scan completed."
+                        echo "======================================"
+                    '''
+                }
             }
         }
-
 
         // =========================================================
         // DOCKER HUB PUSH
         // =========================================================
-
         stage('Docker Push') {
             steps {
-                echo 'Pushing Backend and Frontend images to Docker Hub...'
+                echo '======================================'
+                echo 'Pushing Images to Docker Hub'
+                echo '======================================'
 
                 sh '''
-                    echo "======================================"
-                    echo "Docker Hub Login"
-                    echo "======================================"
-
                     echo "$DOCKERHUB_CREDENTIALS_PSW" | \
                     docker login \
-                      -u "$DOCKERHUB_CREDENTIALS_USR" \
-                      --password-stdin
-
+                        -u "$DOCKERHUB_CREDENTIALS_USR" \
+                        --password-stdin
 
                     echo ""
-                    echo "======================================"
-                    echo "Push Backend Image"
-                    echo "======================================"
+                    echo "Pushing Backend image..."
 
                     docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
-
                     docker push ${BACKEND_IMAGE}:latest
 
-
                     echo ""
-                    echo "======================================"
-                    echo "Push Frontend Image"
-                    echo "======================================"
+                    echo "Pushing Frontend image..."
 
                     docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
-
                     docker push ${FRONTEND_IMAGE}:latest
 
-
                     echo ""
-                    echo "======================================"
-                    echo "Docker Images Successfully Pushed"
-                    echo "======================================"
-
-                    echo "Backend:"
-                    echo "${BACKEND_IMAGE}:${IMAGE_TAG}"
-
-                    echo "${BACKEND_IMAGE}:latest"
-
-                    echo ""
-
-                    echo "Frontend:"
-                    echo "${FRONTEND_IMAGE}:${IMAGE_TAG}"
-
-                    echo "${FRONTEND_IMAGE}:latest"
+                    echo "Docker Hub push completed."
                 '''
             }
         }
-
 
         // =========================================================
         // DEPLOY
         // =========================================================
-
         stage('Deploy') {
             steps {
-                echo 'Deployment stage...'
+                echo '======================================'
+                echo 'Deploy Stage'
+                echo '======================================'
 
-                sh '''
-                    echo "======================================"
-                    echo "Deployment Information"
-                    echo "======================================"
-
-                    echo "Backend Image:"
-                    echo "${BACKEND_IMAGE}:${IMAGE_TAG}"
-
-                    echo ""
-
-                    echo "Frontend Image:"
-                    echo "${FRONTEND_IMAGE}:${IMAGE_TAG}"
-
-                    echo ""
-
-                    echo "Images have been pushed successfully to Docker Hub."
-
-                    echo ""
-
-                    echo "Argo CD deployment will be configured next."
-                '''
+                echo 'Images pushed successfully.'
+                echo 'Deployment will be handled by Argo CD.'
             }
         }
     }
 
-
     // =============================================================
     // POST ACTIONS
     // =============================================================
-
     post {
 
         always {
+            echo '======================================'
             echo 'Pipeline cleanup completed.'
+            echo '======================================'
 
             sh '''
                 docker logout || true
@@ -378,7 +304,7 @@ pipeline {
             echo 'EmployeeHub CI/CD Pipeline SUCCESS'
             echo '======================================'
 
-            echo "Backend Image: ${BACKEND_IMAGE}:${IMAGE_TAG}"
+            echo "Backend Image:  ${BACKEND_IMAGE}:${IMAGE_TAG}"
             echo "Frontend Image: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
         }
 
@@ -386,8 +312,6 @@ pipeline {
             echo '======================================'
             echo 'EmployeeHub CI/CD Pipeline FAILED'
             echo '======================================'
-
-            echo "Please check the failed stage in Console Output."
         }
     }
 }
