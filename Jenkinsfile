@@ -1,155 +1,146 @@
 pipeline {
-agent any
+    agent any
 
-environment {
-    IMAGE_NAME = 'ps73171/employeehub-backend'
-    IMAGE_TAG = "${BUILD_NUMBER}"
-    DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-}
-
-stages {
-
-    stage('Checkout') {
-        steps {
-            echo 'Checking out EmployeeHub source code...'
-            checkout scm
-        }
+    tools {
+        // Jenkins > Manage Jenkins > Tools
+        // SonarQube Scanner installation name:
+        // sonar-scanner
+        sonarQube 'sonar-scanner'
     }
 
-    stage('Build') {
-        steps {
-            echo 'Building EmployeeHub application...'
+    environment {
+        IMAGE_NAME = 'ps73171/employeehub-backend'
+        IMAGE_TAG = "${BUILD_NUMBER}"
 
-            sh '''
-                echo "Docker version:"
-                docker --version
-            '''
-        }
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        SONAR_TOKEN = credentials('sonarID')
     }
 
-    stage('Test') {
-        steps {
-            echo 'Running EmployeeHub application tests...'
+    stages {
 
-            sh '''
-                cd backend
-
-                echo "Running application tests..."
-
-                # Uncomment when pytest is configured:
-                # python -m pytest
-
-                echo "Tests completed successfully."
-            '''
+        stage('Checkout') {
+            steps {
+                echo 'Checking out EmployeeHub source code...'
+                checkout scm
+            }
         }
-    }
 
-    stage('SonarQube Scan') {
-        steps {
-            echo 'Running SonarQube analysis...'
+        stage('Build') {
+            steps {
+                echo 'Building EmployeeHub application...'
 
-            script {
-                def scannerHome = tool 'sonar-scanner'
+                sh '''
+                    echo "Docker version:"
+                    docker --version
+
+                    echo "SonarScanner version:"
+                    sonar-scanner --version
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running EmployeeHub application tests...'
+
+                sh '''
+                    cd backend
+
+                    echo "Running application tests..."
+
+                    # Add your actual tests here if available.
+                    # Example:
+                    # python -m pytest
+
+                    echo "Tests completed successfully."
+                '''
+            }
+        }
+
+        stage('SonarQube Scan') {
+            steps {
+                echo 'Running SonarQube analysis...'
 
                 withSonarQubeEnv('sonar') {
-
-                    withCredentials([
-                        string(
-                            credentialsId: 'sonarID',
-                            variable: 'SONAR_TOKEN'
-                        )
-                    ]) {
-
-                        sh """
-                            echo "SonarScanner version:"
-                            ${scannerHome}/bin/sonar-scanner --version
-
-                            echo "Starting SonarQube scan..."
-
-                            ${scannerHome}/bin/sonar-scanner \
-                              -Dsonar.projectKey=employeehub-backend \
-                              -Dsonar.sources=./backend \
-                              -Dsonar.host.url="\$SONAR_HOST_URL" \
-                              -Dsonar.token="\$SONAR_TOKEN"
-                        """
-                    }
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=employeehub-backend \
+                          -Dsonar.projectName=EmployeeHub Backend \
+                          -Dsonar.sources=backend \
+                          -Dsonar.host.url="$SONAR_HOST_URL" \
+                          -Dsonar.token="$SONAR_TOKEN"
+                    '''
                 }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                echo 'Building Docker image...'
+
+                sh '''
+                    docker build \
+                      -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                      ./backend
+
+                    docker tag \
+                      ${IMAGE_NAME}:${IMAGE_TAG} \
+                      ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
+                echo 'Running Trivy security scan...'
+
+                sh '''
+                    trivy image \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 0 \
+                      ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                echo 'Pushing Docker image to Docker Hub...'
+
+                sh '''
+                    echo "$DOCKERHUB_CREDENTIALS_PSW" | \
+                    docker login \
+                      -u "$DOCKERHUB_CREDENTIALS_USR" \
+                      --password-stdin
+
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker push ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deployment stage will be configured with Kubernetes/Argo CD.'
             }
         }
     }
 
-    stage('Docker Build') {
-        steps {
-            echo 'Building EmployeeHub Docker image...'
+    post {
+        always {
+            echo 'Pipeline cleanup completed.'
 
             sh '''
-                docker build \
-                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                    ./backend
-
-                docker tag \
-                    ${IMAGE_NAME}:${IMAGE_TAG} \
-                    ${IMAGE_NAME}:latest
-
-                echo "Docker images created:"
-                docker images | grep employeehub-backend
-            '''
-        }
-    }
-
-    stage('Trivy Security Scan') {
-        steps {
-            echo 'Running Trivy security scan...'
-
-            sh '''
-                trivy image \
-                    --exit-code 0 \
-                    --severity HIGH,CRITICAL \
-                    ${IMAGE_NAME}:${IMAGE_TAG}
-            '''
-        }
-    }
-
-    stage('Docker Push') {
-        steps {
-            echo 'Pushing Docker images to Docker Hub...'
-
-            sh '''
-                echo "$DOCKERHUB_CREDENTIALS_PSW" | \
-                docker login \
-                    -u "$DOCKERHUB_CREDENTIALS_USR" \
-                    --password-stdin
-
-                docker push ${IMAGE_NAME}:${IMAGE_TAG}
-
-                docker push ${IMAGE_NAME}:latest
-
                 docker logout || true
             '''
         }
-    }
 
-    stage('Deploy') {
-        steps {
-            echo 'Deployment stage is currently not configured.'
-            echo 'Kubernetes/Argo CD deployment will be configured later.'
+        success {
+            echo 'EmployeeHub CI/CD Pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'EmployeeHub CI/CD Pipeline failed.'
         }
     }
-}
-
-post {
-
-    success {
-        echo 'EmployeeHub CI/CD Pipeline completed successfully!'
-    }
-
-    failure {
-        echo 'EmployeeHub CI/CD Pipeline failed.'
-    }
-
-    cleanup {
-        echo 'Pipeline cleanup completed.'
-    }
-}
-
 }
