@@ -1,32 +1,12 @@
-# EmployeeHub Backend Dependencies
-
-# FastAPI Framework
 fastapi
-
-# ASGI Server
 uvicorn[standard]
-
-# Database ORM
 sqlalchemy
-
-# PostgreSQL Driver
 psycopg2-binary
-
-# Environment Variables
 python-dotenv
-
-# Data Validation
 pydantic
 pydantic-settings
-
-# Authentication & Security
+email-validator
 python-jose[cryptography]
-
-# Password Hashing
 passlib[bcrypt]
-
-# Multipart Form Data
 python-multipart
-
-# CORS Support
-starlette 
+starlette
