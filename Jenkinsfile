@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'ps73171/employeehub-backend'
+        BACKEND_IMAGE = 'ps73171/employeehub-backend'
+        FRONTEND_IMAGE = 'ps73171/employeehub-frontend'
+
         IMAGE_TAG = "${BUILD_NUMBER}"
 
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
@@ -24,6 +26,18 @@ pipeline {
                 sh '''
                     echo "Docker version:"
                     docker --version
+
+                    echo "Workspace:"
+                    pwd
+
+                    echo "Project structure:"
+                    ls -la
+
+                    echo "Backend:"
+                    ls -la backend || true
+
+                    echo "Frontend:"
+                    ls -la frontend || true
                 '''
             }
         }
@@ -33,15 +47,23 @@ pipeline {
                 echo 'Running EmployeeHub application tests...'
 
                 sh '''
-                    cd backend
+                    if [ -d "backend" ]; then
+                        cd backend
 
-                    echo "Running application tests..."
+                        echo "Running backend tests..."
 
-                    # Add your actual tests here if available.
-                    # Example:
-                    # python -m pytest
+                        if [ -f "requirements.txt" ]; then
+                            echo "requirements.txt found"
+                        fi
 
-                    echo "Tests completed successfully."
+                        # Add actual tests here when available.
+                        # Example:
+                        # python -m pytest
+
+                        echo "Backend tests completed."
+                    fi
+
+                    echo "Frontend test stage completed."
                 '''
             }
         }
@@ -71,12 +93,12 @@ pipeline {
 
                                 echo "Starting SonarQube scan..."
 
-                                ${scannerHome}/bin/sonar-scanner \
-                                  -Dsonar.projectKey=employeehub-backend \
-                                  -Dsonar.projectName="EmployeeHub Backend" \
-                                  -Dsonar.sources=backend \
-                                  -Dsonar.host.url=\$SONAR_HOST_URL \
-                                  -Dsonar.token=\$SONAR_TOKEN
+                                ${scannerHome}/bin/sonar-scanner \\
+                                  -Dsonar.projectKey=employeehub \\
+                                  -Dsonar.projectName="EmployeeHub" \\
+                                  -Dsonar.sources=backend,frontend \\
+                                  -Dsonar.host.url=\\\$SONAR_HOST_URL \\
+                                  -Dsonar.token=\\\$SONAR_TOKEN
                             """
                         }
                     }
@@ -86,16 +108,40 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo 'Building Docker image...'
+                echo 'Building Backend and Frontend Docker images...'
 
                 sh '''
+                    echo "=============================="
+                    echo "Building Backend Image"
+                    echo "=============================="
+
                     docker build \
-                      -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                      -t ${BACKEND_IMAGE}:${IMAGE_TAG} \
                       ./backend
 
                     docker tag \
-                      ${IMAGE_NAME}:${IMAGE_TAG} \
-                      ${IMAGE_NAME}:latest
+                      ${BACKEND_IMAGE}:${IMAGE_TAG} \
+                      ${BACKEND_IMAGE}:latest
+
+
+                    echo "=============================="
+                    echo "Building Frontend Image"
+                    echo "=============================="
+
+                    docker build \
+                      -t ${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                      ./frontend
+
+                    docker tag \
+                      ${FRONTEND_IMAGE}:${IMAGE_TAG} \
+                      ${FRONTEND_IMAGE}:latest
+
+
+                    echo "=============================="
+                    echo "Docker Images"
+                    echo "=============================="
+
+                    docker images | grep employeehub
                 '''
             }
         }
@@ -105,17 +151,31 @@ pipeline {
                 echo 'Running Trivy security scan...'
 
                 sh '''
+                    echo "=============================="
+                    echo "Scanning Backend Image"
+                    echo "=============================="
+
                     trivy image \
                       --severity HIGH,CRITICAL \
                       --exit-code 0 \
-                      ${IMAGE_NAME}:${IMAGE_TAG}
+                      ${BACKEND_IMAGE}:${IMAGE_TAG}
+
+
+                    echo "=============================="
+                    echo "Scanning Frontend Image"
+                    echo "=============================="
+
+                    trivy image \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 0 \
+                      ${FRONTEND_IMAGE}:${IMAGE_TAG}
                 '''
             }
         }
 
         stage('Docker Push') {
             steps {
-                echo 'Pushing Docker image to Docker Hub...'
+                echo 'Pushing Backend and Frontend images to Docker Hub...'
 
                 sh '''
                     echo "$DOCKERHUB_CREDENTIALS_PSW" | \
@@ -123,16 +183,40 @@ pipeline {
                       -u "$DOCKERHUB_CREDENTIALS_USR" \
                       --password-stdin
 
-                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
 
-                    docker push ${IMAGE_NAME}:latest
+                    echo "=============================="
+                    echo "Pushing Backend Image"
+                    echo "=============================="
+
+                    docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
+                    docker push ${BACKEND_IMAGE}:latest
+
+
+                    echo "=============================="
+                    echo "Pushing Frontend Image"
+                    echo "=============================="
+
+                    docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
+                    docker push ${FRONTEND_IMAGE}:latest
                 '''
             }
         }
 
         stage('Deploy') {
             steps {
-                echo 'Deployment stage will be configured with Kubernetes/Argo CD.'
+                echo 'Deployment stage...'
+
+                sh '''
+                    echo "Docker images successfully pushed."
+
+                    echo "Backend Image:"
+                    echo "${BACKEND_IMAGE}:${IMAGE_TAG}"
+
+                    echo "Frontend Image:"
+                    echo "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+
+                    echo "Kubernetes/Argo CD deployment can be configured here."
+                '''
             }
         }
     }
@@ -148,6 +232,8 @@ pipeline {
 
         success {
             echo 'EmployeeHub CI/CD Pipeline completed successfully!'
+            echo "Backend: ${BACKEND_IMAGE}:${IMAGE_TAG}"
+            echo "Frontend: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
         }
 
         failure {
