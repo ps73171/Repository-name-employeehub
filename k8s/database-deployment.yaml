@@ -16,28 +16,37 @@ spec:
       containers:
         - name: postgres
           image: postgres:16
+          imagePullPolicy: IfNotPresent
+
           ports:
             - containerPort: 5432
+
           env:
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: database-secret
                   key: POSTGRES_DB
+
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: database-secret
                   key: POSTGRES_USER
+
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: database-secret
                   key: POSTGRES_PASSWORD
+
+          # TEMPORARY:
+          # No PVC/PV required
+          # Data will be lost if this Pod is recreated.
           volumeMounts:
-            - name: database-storage
+            - name: postgres-storage
               mountPath: /var/lib/postgresql/data
+
       volumes:
-        - name: database-storage
-          persistentVolumeClaim:
-            claimName: database-pvc
+        - name: postgres-storage
+          emptyDir: {}
