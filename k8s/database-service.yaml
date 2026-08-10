@@ -4,11 +4,10 @@ metadata:
   name: employeehub-database
   namespace: employeehub
 spec:
-  type: ClusterIP
   selector:
     app: employeehub-database
   ports:
-    - name: postgres
+    - protocol: TCP
       port: 5432
       targetPort: 5432
-      protocol: TCP
+  type: ClusterIP
