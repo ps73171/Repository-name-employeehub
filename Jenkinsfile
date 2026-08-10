@@ -6,7 +6,6 @@ pipeline {
         IMAGE_TAG = "${BUILD_NUMBER}"
 
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        SONAR_TOKEN = credentials('sonarID')
     }
 
     stages {
@@ -38,7 +37,8 @@ pipeline {
 
                     echo "Running application tests..."
 
-                    # Add actual tests here if available
+                    # Add your actual tests here if available.
+                    # Example:
                     # python -m pytest
 
                     echo "Tests completed successfully."
@@ -51,18 +51,25 @@ pipeline {
                 echo 'Running SonarQube analysis...'
 
                 script {
-                    def scannerHome = tool 'sonar-scanner'
+                    def scannerHome = tool(
+                        name: 'sonar-scanner',
+                        type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    )
 
                     withSonarQubeEnv('sonar') {
+
                         withCredentials([
                             string(
                                 credentialsId: 'sonarID',
                                 variable: 'SONAR_TOKEN'
                             )
                         ]) {
+
                             sh """
                                 echo "SonarScanner location:"
                                 ${scannerHome}/bin/sonar-scanner --version
+
+                                echo "Starting SonarQube scan..."
 
                                 ${scannerHome}/bin/sonar-scanner \
                                   -Dsonar.projectKey=employeehub-backend \
@@ -117,6 +124,7 @@ pipeline {
                       --password-stdin
 
                     docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
                     docker push ${IMAGE_NAME}:latest
                 '''
             }
