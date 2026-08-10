@@ -1,6 +1,10 @@
 pipeline {
 agent any
 
+tools {
+    sonarQube 'sonar-scanner'
+}
+
 environment {
     IMAGE_NAME = 'ps73171/employeehub-backend'
     IMAGE_TAG = "${BUILD_NUMBER}"
@@ -21,7 +25,7 @@ stages {
             echo 'Building EmployeeHub application...'
 
             sh '''
-                echo "Checking Docker version..."
+                echo "Docker version:"
                 docker --version
             '''
         }
@@ -34,9 +38,9 @@ stages {
             sh '''
                 cd backend
 
-                echo "Running tests..."
+                echo "Running application tests..."
 
-                # Enable this when pytest tests are available:
+                # Enable this when pytest is configured:
                 # python -m pytest
 
                 echo "Tests completed successfully."
@@ -58,6 +62,11 @@ stages {
                 ]) {
 
                     sh '''
+                        echo "SonarScanner version:"
+                        sonar-scanner --version
+
+                        echo "Starting SonarQube scan..."
+
                         sonar-scanner \
                           -Dsonar.projectKey=employeehub-backend \
                           -Dsonar.sources=./backend \
@@ -71,7 +80,7 @@ stages {
 
     stage('Docker Build') {
         steps {
-            echo 'Building Docker image...'
+            echo 'Building EmployeeHub Docker image...'
 
             sh '''
                 docker build \
@@ -81,13 +90,16 @@ stages {
                 docker tag \
                     ${IMAGE_NAME}:${IMAGE_TAG} \
                     ${IMAGE_NAME}:latest
+
+                echo "Docker images created:"
+                docker images | grep employeehub-backend
             '''
         }
     }
 
     stage('Trivy Security Scan') {
         steps {
-            echo 'Scanning Docker image with Trivy...'
+            echo 'Running Trivy security scan...'
 
             sh '''
                 trivy image \
@@ -120,12 +132,13 @@ stages {
     stage('Deploy') {
         steps {
             echo 'Deployment stage is currently not configured.'
-            echo 'Kubernetes/Argo CD deployment will be configured next.'
+            echo 'Kubernetes/Argo CD deployment will be configured later.'
         }
     }
 }
 
 post {
+
     success {
         echo 'EmployeeHub CI/CD Pipeline completed successfully!'
     }
