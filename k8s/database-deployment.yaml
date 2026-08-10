@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employeehub-database
+  namespace: employeehub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: employeehub-database
+  template:
+    metadata:
+      labels:
+        app: employeehub-database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: database-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: database-storage
+          persistentVolumeClaim:
+            claimName: database-pvc

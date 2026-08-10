@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: employeehub-ingress
+  namespace: employeehub
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: employeehub.local
+      http:
+        paths:
+
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: employeehub-backend
+                port:
+                  number: 8000
+
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: employeehub-frontend
+                port:
+                  number: 80

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: employeehub-database
+  namespace: employeehub
+spec:
+  type: ClusterIP
+  selector:
+    app: employeehub-database
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
