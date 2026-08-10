@@ -1,13 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        // Jenkins > Manage Jenkins > Tools
-        // SonarQube Scanner installation name:
-        // sonar-scanner
-        sonarQube 'sonar-scanner'
-    }
-
     environment {
         IMAGE_NAME = 'ps73171/employeehub-backend'
         IMAGE_TAG = "${BUILD_NUMBER}"
@@ -32,9 +25,6 @@ pipeline {
                 sh '''
                     echo "Docker version:"
                     docker --version
-
-                    echo "SonarScanner version:"
-                    sonar-scanner --version
                 '''
             }
         }
@@ -48,8 +38,7 @@ pipeline {
 
                     echo "Running application tests..."
 
-                    # Add your actual tests here if available.
-                    # Example:
+                    # Add actual tests here if available
                     # python -m pytest
 
                     echo "Tests completed successfully."
@@ -61,15 +50,29 @@ pipeline {
             steps {
                 echo 'Running SonarQube analysis...'
 
-                withSonarQubeEnv('sonar') {
-                    sh '''
-                        sonar-scanner \
-                          -Dsonar.projectKey=employeehub-backend \
-                          -Dsonar.projectName=EmployeeHub Backend \
-                          -Dsonar.sources=backend \
-                          -Dsonar.host.url="$SONAR_HOST_URL" \
-                          -Dsonar.token="$SONAR_TOKEN"
-                    '''
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+
+                    withSonarQubeEnv('sonar') {
+                        withCredentials([
+                            string(
+                                credentialsId: 'sonarID',
+                                variable: 'SONAR_TOKEN'
+                            )
+                        ]) {
+                            sh """
+                                echo "SonarScanner location:"
+                                ${scannerHome}/bin/sonar-scanner --version
+
+                                ${scannerHome}/bin/sonar-scanner \
+                                  -Dsonar.projectKey=employeehub-backend \
+                                  -Dsonar.projectName="EmployeeHub Backend" \
+                                  -Dsonar.sources=backend \
+                                  -Dsonar.host.url=\$SONAR_HOST_URL \
+                                  -Dsonar.token=\$SONAR_TOKEN
+                            """
+                        }
+                    }
                 }
             }
         }
