@@ -1,7 +1,4 @@
-text
-# =========================================
 # EmployeeHub Backend Dependencies
-# =========================================
 
 # FastAPI Framework
 fastapi
@@ -32,5 +29,4 @@ passlib[bcrypt]
 python-multipart
 
 # CORS Support
-starlette
-
+starlette 
