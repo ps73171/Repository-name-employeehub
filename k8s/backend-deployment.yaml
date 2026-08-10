@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ps73171/employeehub-backend:latest
+          image: ps73171/employeehub-backend:27
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
